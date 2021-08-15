@@ -1,3 +1,4 @@
+import { useRouter } from "next/dist/client/router";
 import { useState } from "react";
 import {
   sanityClient,
@@ -24,7 +25,17 @@ const recipesQuery = `*[_type == "recipe" && slug.current == $slug][0]{
   likes
 }`;
 
-export default function OneRecipe({ data }) {
+export default function OneRecipe({ data, preview }) {
+  const router = useRouter();
+
+  if (router.isFallback) {
+    return <div>Loaing...</div>
+  }
+  const { data: recipe } = usePreviewSubscription(recipesQuery, {
+    params: { slug: data.recipe?.slug.current },
+    initialData: data,
+    enabled: preview,
+  });
 
   const [likes, setLikes] = useState(data?.recipe?.likes);
 
@@ -38,8 +49,6 @@ export default function OneRecipe({ data }) {
 
     setLikes(data.likes);
   };
-
-  const { recipe } = data;
 
   return (
     <article className="recipe">
@@ -87,5 +96,5 @@ export async function getStaticPaths() {
 export async function getStaticProps({params}) {
   const { slug } = params;
   const recipe = await sanityClient.fetch(recipesQuery, { slug });
-  return { props: { data: { recipe } } };
+  return { props: { data: { recipe }, preview: true } };
 }
